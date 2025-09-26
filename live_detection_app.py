@@ -115,7 +115,7 @@ def detect_accidents(video_source):
     st.success("✅ Finished. Accident timestamps saved to accidents.json")
 
 # --- Streamlit UI ---
-st.title("🚦 Real-Time Accident Detection with Notifications")
+st.title("🚦 Real-Time Accident Detection")
 
 mode = st.radio("Choose Mode:", ["Upload Video", "Live Camera"])
 
