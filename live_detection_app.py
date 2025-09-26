@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import tempfile
 import json
+import time
 from ultralytics import YOLO
 import torch
 
@@ -43,15 +44,15 @@ class TinyTracker:
         self.tracks = new_tracks
         return results
 
-# --- Detection Function ---
-FRAME_SKIP = 2           # process every 2nd frame for speed
-MIN_OVERLAP_AREA = 500   # min area for collision to avoid false positives
 
-def detect_accidents(video_source):
-    # Load model
+# --- Detection Function ---
+FRAME_SKIP = 2           # process every 2nd frame
+MIN_OVERLAP_AREA = 500   # filter false positives
+
+def detect_accidents(video_source, stop_flag):
     model = YOLO("yolov8n.pt")
     if torch.cuda.is_available():
-        model.to("cuda").fuse().half()  # GPU optimizations
+        model.to("cuda")
 
     cap = cv2.VideoCapture(video_source)
     tracker = TinyTracker()
@@ -59,27 +60,25 @@ def detect_accidents(video_source):
     fps = cap.get(cv2.CAP_PROP_FPS) or 30
     frame_idx = 0
 
-    stframe = st.empty()            
-    accident_placeholder = st.empty()  
+    stframe = st.empty()
+    accident_placeholder = st.empty()
 
-    while True:
+    while cap.isOpened() and not stop_flag():
         ret, frame = cap.read()
         if not ret:
             break
 
-        # Run detection only on every N-th frame
         if frame_idx % FRAME_SKIP == 0:
             results = model(frame, conf=0.25, verbose=False)[0]
             boxes = []
             for b, c in zip(results.boxes.xyxy.cpu().numpy(), results.boxes.cls.cpu().numpy()):
-                if int(c) in [0, 2, 3, 5, 7]:
+                if int(c) in [0, 2, 3, 5, 7]:  # person, car, bike, bus, truck
                     x1, y1, x2, y2 = map(int, b)
                     boxes.append((x1, y1, x2, y2))
             tracks = tracker.update(boxes)
         else:
             tracks = tracker.update([])
 
-        # detect collisions
         accident_ids = set()
         new_accident = False
         for i in range(len(tracks)):
@@ -100,7 +99,8 @@ def detect_accidents(video_source):
             x1, y1, x2, y2 = box
             color = (0, 0, 255) if tid in accident_ids else (0, 255, 0)
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 3)
-            cv2.putText(frame, f"ID {tid}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+            cv2.putText(frame, f"ID {tid}", (x1, y1 - 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         stframe.image(frame_rgb, channels="RGB")
@@ -109,10 +109,12 @@ def detect_accidents(video_source):
             accident_placeholder.warning("⚠️ Accident detected!")
 
         frame_idx += 1
+        time.sleep(0.01)  # allow Streamlit UI to refresh
 
     cap.release()
     with open("accidents.json", "w") as f:
         json.dump(accidents, f)
+
 
 # --- Streamlit UI ---
 st.title("🚦 Real-Time Accident Detection")
@@ -124,8 +126,10 @@ if mode == "Upload Video":
     if uploaded_file is not None:
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_file.read())
-        detect_accidents(tfile.name)
+        detect_accidents(tfile.name, stop_flag=lambda: False)
 
 elif mode == "Live Camera":
-    if st.button("Start Live Camera"):
-        detect_accidents(0)
+    run = st.checkbox("Start Live Camera")
+    if run:
+        stop = st.button("Stop Camera")
+        detect_accidents(0, stop_flag=lambda: stop)
