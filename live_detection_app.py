@@ -106,17 +106,16 @@ def detect_accidents(video_source):
         stframe.image(frame_rgb, channels="RGB")
 
         if new_accident:
-            accident_placeholder.warning("⚠️ Accident detected! Be cautious!")
+            accident_placeholder.warning("⚠️ Accident detected!")
 
         frame_idx += 1
 
     cap.release()
     with open("accidents.json", "w") as f:
         json.dump(accidents, f)
-    st.success("✅ Finished. Accident timestamps saved to accidents.json")
 
 # --- Streamlit UI ---
-st.title("🚦 Real-Time Accident Detection with Notifications")
+st.title("🚦 Real-Time Accident Detection")
 
 mode = st.radio("Choose Mode:", ["Upload Video", "Live Camera"])
 
