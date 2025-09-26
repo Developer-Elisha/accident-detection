@@ -22,7 +22,7 @@ The system detects vehicles and people in videos or live camera feeds, tracks th
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/accident-detection.git
+git clone https://github.com/Developer-Elisha/accident-detection
 cd accident-detection
 ```
 
