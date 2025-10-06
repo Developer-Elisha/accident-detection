@@ -1,5 +1,15 @@
+# Core Streamlit and WebRTC support
 streamlit>=1.25.0
+streamlit-webrtc
+
+# YOLOv8 / Ultralytics for object detection
 ultralytics>=8.3.203
+
+# Computer vision & numerical tools
 opencv-python-headless>=4.9.0
 numpy>=1.24.0
-torch
+
+# PyTorch backend
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
